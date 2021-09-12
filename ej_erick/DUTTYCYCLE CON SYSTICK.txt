@@ -1,0 +1,134 @@
+﻿
+//DUTTY CYCLE CON SYSTICK
+
+/*
+===============================================================================
+ Name        : DUTYCYCLEWAYAR.c
+ Author      : $(author)
+ Version     :
+ Copyright   : $(copyright)
+ Description : main definition
+===============================================================================
+*/
+
+//DUTTY CYCLE
+
+
+/*
+
+//DUTTY CYCLE
+
+
+/*
+===============================================================================
+ Name        : SysTick_Ex2.c
+ Author      : jwayar
+ Version     :
+ Description :
+ 1.- Leer el capitulo 23 "LPC176x/5x System Tick Timer"
+
+2.- Modificar el código adjunto para conseguir que l
+	El parpadeo del led sea de un segundo prendido y
+	medio segundo apagado utilizando variables de tipo Static.
+
+3.- Adjuntar el código .c  Nombre de los archivos "eje6ApellidoDelEstudiante".
+				(WAYAR_SysTick_Ex2.c)
+===============================================================================
+*/
+
+#ifdef __USE_CMSIS
+#include "LPC17xx.h"
+#endif
+
+#include <cr_section_macros.h>
+
+#define o_ledPWM 22 	// salida PWM en un led, el PO.22
+#define o_PWM 	 9		// salida PWM para conectar motor en PO.9
+
+void configGPIO(void);	// salidas: led, pwm
+void configEINT0(void);	// EINT0 Interrupcion Externa P2.10
+
+uint8_t flagLedOn =1 ; 	// Bandera que nos dice cuando prender el led
+uint8_t duty_cicle=1;  // Empieza con un duty del 10%
+						// este valor se modifica en la EINT0
+
+int main(void) {
+
+	configEINT0();
+	configGPIO();
+	NVIC_EnableIRQ(EINT0_IRQn);    			// Enable the EINT0 interrupts
+	NVIC_SetPriority(SysTick_IRQn	,0); 	// 0:mayor prioridad
+	NVIC_SetPriority(EINT0_IRQn		,1); 	// 1: la que sigue en prioridad
+
+
+	//configura cuenta del SysTick: Interrumpe cada 0,01seg = 1mseg
+	if( SysTick_Config(2000000)) // tambien puede ponerse SystemCoreClock/100
+	{
+		while(1); // notifica un error si se supera el valor de carga
+	}
+
+    while(1) {						// se recomienda realizar las tareas en el main
+    	if(flagLedOn){				// por eso se trabaja con banderas
+    		LPC_GPIO0->FIOSET |= (1<<o_ledPWM	);
+    		LPC_GPIO0->FIOSET |= (1<<o_PWM		);
+    	}
+    	else{
+    		LPC_GPIO0->FIOCLR |= (1<<o_ledPWM	);
+    		LPC_GPIO0->FIOCLR |= (1<<o_PWM 		);
+    	}
+    }
+    return 0 ;
+}
+
+//-- Config GPIO0
+void configGPIO(void){
+	LPC_GPIO0->FIODIR |=(1<<o_ledPWM	);
+	LPC_GPIO0->FIODIR |=(1<<o_PWM		);
+	return;
+}
+
+
+//-- Config EINT0
+void configEINT0(void){
+/*       		PINSEL4	[00]		PINSEL4 [01]
+ *	P2.10		GPIO				EINT0
+ *  puerto2 pin10, se configuran los bits 20 y 21 del PINSEL4
+ *  pin10 por 2 = pin20 del PINSEL4
+ */
+	// EINT0
+
+	//LPC_PINCON->PINSEL4 |= 	(1<<20);
+	//LPC_SC->EXTMODE 	|=	(1<< 0);  	/* Configure EINT0 por Flanco*/
+	//LPC_SC->EXTPOLAR 	|= 	(1<< 0);	/* Configure EINT0 por Flanco de Subida */
+	//============================================================================
+	LPC_PINCON->PINSEL4|=(1<<20);//P2[10] como entrada es el pulsador de laplaca
+		LPC_SC->EXTINT|=1;
+		LPC_SC->EXTMODE|=1;
+		LPC_SC->EXTPOLAR|=1;
+
+}
+
+//-- SRI SysTick
+void SysTick_Handler(void) {
+    static uint8_t tick   = 1;
+
+    if(tick <= duty_cicle){
+    	flagLedOn=1;
+    }
+    else{
+    	flagLedOn=0;
+    }
+    tick++;
+    if(tick==11)
+	tick=1;
+}
+
+//-- SRI EINT0
+void EINT0_IRQHandler(){
+	duty_cicle++;		// incremento el duty desde el 10% (valor inicial)
+	if(duty_cicle==11){	// hasta el 100%, y vuelve al 10% en caso de superar.
+	   duty_cicle=1;
+	}
+
+	LPC_SC->EXTINT |= (1<<0); // "0" de EINT0: Bajo Bandera
+}

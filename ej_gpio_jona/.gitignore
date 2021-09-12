@@ -1,0 +1,9 @@
+/.metadata/
+#Eliminado carpetas
+FreeRTOS_TAD_logs
+AzureRTOS_TAD_logs
+.metadata
+.mcuxpressoide_packages_support
+.cproject
+.project
+.Ejercicio1 LinkServer Debug.launch

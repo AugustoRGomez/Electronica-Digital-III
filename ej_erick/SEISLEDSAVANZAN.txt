@@ -1,0 +1,87 @@
+﻿
+//LEDS ENCENDENDIDOS CON PULSADOR
+
+/*
+===============================================================================
+ Name        : sSEISLEDIAN.c
+ Author      : $(author) JOEL WAYAR
+ Version     :
+ Copyright   : $(copyright)
+ Description : main definition
+===============================================================================
+*/
+
+#ifdef __USE_CMSIS
+#include "LPC17xx.h"
+#endif
+
+#include <cr_section_macros.h>
+
+
+#define ledPos1 1
+#define ledPos2 2
+#define ledPos3 3
+#define ledPos4 4
+#define ledPos5 5
+#define ledPos6 6
+
+#define PulsadorPos 10
+//AL PULSAR LAS LUCES DE LOS LEDS QUE SON SEIS AVANZANZAN DOS LUGARES EL CODIGO TIENE ANTIREBOTES
+
+
+
+int main(void) {
+	int vector_Led[6] = {ledPos1,ledPos2,ledPos3,ledPos4,ledPos5,ledPos6};
+	int pulsadorEstatus;
+	LPC_GPIO0->FIOMASK |= (0XFFFFFFFF)&~(0XFF);//CUANDO SE ENMASCAR SOLO ACITVAN LOS QUE ESTOY USANDO EL RESTO NO
+	//LA MASCARA NOS PERMITE LEER SIN PROBLEMAS CUANDO USEMOS EL FIOPIN
+
+   int pos = 0;
+	while(1){
+
+		LPC_GPIO0->FIOPIN |= 1<<vector_Led[ledPos1];//INICIALIZO EL SISTEMA ENCENDIENDO EL PRIMER LED
+		LPC_GPIO0->FIOPIN |= 1<<vector_Led[ledPos2];
+		LPC_GPIO0->FIOPIN |= 1<<vector_Led[ledPos3];
+		          // LA NOVEDAD ES QUE UN ELEMENTO DEL ARREGLO ES (1<<22) EI BIT 22 RECORRIDO S LS IZQIORDA
+
+		pulsadorEstatus = ((LPC_GPIO0->FIOPIN)&&PulsadorPos );
+
+		    if(pulsadorEstatus){
+		    	pos++;
+
+				vector_Led[pos++];
+				LPC_GPIO0->FIOPIN |=(1<< vector_Led[pos]);
+				if(pos%6 == 0){
+				pos =0;
+				}
+
+
+		    }
+
+            while(!((LPC_GPIO0->FIOPIN) && 1<<(pulsadorEstatus)));
+
+
+    }
+    return 0 ;
+}
+
+
+void ConfigGpio(void){
+	LPC_GPIO0->FIODIR |= 0XFF;
+	LPC_GPIO2->FIODIR &= ~(1<<10);//ENTRADA P2[10]
+
+
+
+}
+
+void ConfPinsel(void){
+	LPC_PINCON->PINSEL4 &= ~(3<<20); //como GPIO
+	LPC_PINCON->PINMODE4 &= ~(3<20);//ACTIVO EL PULLUP SOLO SE USA COMO PULSADOR PARA ENVIAR UN CERO
+
+
+
+
+}
+
+
+

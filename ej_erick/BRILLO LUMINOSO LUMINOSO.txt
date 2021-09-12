@@ -1,0 +1,96 @@
+﻿
+//AUMENTO DE BRILLO CON DUTY CYCLE
+
+/*
+===============================================================================
+ Name        : EJEMPLOS.c
+ Author      : $(author)
+ Version     :
+ Copyright   : $(copyright)
+ Description : main definition
+===============================================================================
+*/
+
+/*
+===============================================================================
+ Name        : eje7CacchiarelliGaston.c
+ Author      : $(author)
+ Version     :
+ Copyright   : $(copyright)
+ Description : main definition
+===============================================================================
+*/
+////CADA VEZ QUE PRESIONO EL PULSADOR P2[10] DE LA PLACA VA A CAMBIAR la intensidad de la  LUMINOSIDAD
+
+#include "LPC17xx.h"
+
+
+void confIntExt(void);
+void confGPIO(void);
+void SysTick_Handler(void);
+void EINT0_IRQHandler(void);
+void retardo(uint32_t );
+
+
+uint8_t inte=0;
+uint8_t estado=0;
+
+int main(void){
+	confGPIO();
+	confIntExt();
+	SysTick_Config(SystemCoreClock/1000); //  100000000/1000= 100000 ver que esta calibrado para 1msinterrumpe cada 1ms frecuencia pwm 100hz
+	NVIC_SetPriority (SysTick_IRQn,15); //cambio de prioridades de la interrupcion
+	NVIC_SetPriority (EINT0_IRQn,22);// aca tambien se estudia rl cambio de prioridad
+
+
+	while(1){
+
+		if(inte<estado){ //inte va cambiando y estado se mantiene relativamente estable con el pulsador Entonces se produce un Multiplexado
+						LPC_GPIO0->FIOCLR=(1<<22);
+						LPC_GPIO2->FIOCLR=(1<<0);
+					}else{
+						LPC_GPIO0->FIOSET=(1<<22);
+						LPC_GPIO2->FIOSET=(1<<0);
+					}
+
+
+
+
+	}
+	return 0;
+}
+void confGPIO(void){
+	LPC_GPIO0->FIODIR |=(1<<22);
+	LPC_GPIO2->FIODIR |=(1<<0);
+}
+
+void confIntExt(void){
+	LPC_PINCON->PINSEL4|=(1<<20);//P2[10] como entrada es el pulsador de laplaca
+	LPC_SC->EXTINT|=1;
+	LPC_SC->EXTMODE|=1;
+	LPC_SC->EXTPOLAR|=1;
+
+	NVIC_EnableIRQ(EINT0_IRQn);
+}
+
+void retardo(uint32_t tiempo){
+	for(uint32_t conta=0;conta<tiempo;conta++){}
+	return;
+}
+
+void SysTick_Handler(void){
+	inte++;
+
+
+	inte = inte%10;
+	SysTick->CTRL &=SysTick->CTRL;
+
+}
+void EINT0_IRQHandler(void){
+	estado++;
+	estado=estado%11;
+	retardo(10000);
+
+	LPC_SC->EXTINT|=1;
+
+}
