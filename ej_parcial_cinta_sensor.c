@@ -66,7 +66,7 @@ int main(void) {
 	SysTick->LOAD= 9999; //valor para interrupir cada 400us
 	NVIC_SetPriority(SysTick_IRQn, 3);
 	SysTick->VAL= 0;
-	SysTick->CTRL= 0b110; //todavia no lo enciendo tranqui
+	SysTick->CTRL= 0b110; //todavia no lo enciendo
 
 	//RUTINA
 	int promedio,i;
@@ -117,7 +117,7 @@ void EINT3_IRQHandler(void) {
 	//Sensor detecto un objeto en posición, dispara el timer
 	LPC_GPIO0->FIOCLR |= (1<<20); //detengo la cinta
 	SysTick->VAL= 0;
-	SysTick->CTRL |= (1<<0); //larga la shit
+	SysTick->CTRL |= (1<<0); //largo timer
 	LPC_GPIOINT->IO0IntClr = (1<<10);
 }
 
