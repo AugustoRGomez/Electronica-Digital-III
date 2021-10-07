@@ -92,7 +92,7 @@ void confIntExt(void){
    //P2.10 (funcion de EINT)
     LPC_PINCON -> PINSEL4 |= (1 << 20);  // PINSEL4 21:20  (0 1)
     LPC_SC -> EXTMODE |= 1; //Selecciona interrupcion por flanco (tabla 11 pag 28)
-    LPC_SC -> EXTPOLAR |= 1; //Interrumpe cuando el flanco es de subida (tabla 12 pag 28)
+    LPC_SC -> EXTPOLAR &= ~1; //Interrumpe cuando el flanco es de bajada (tabla 12 pag 28)
     LPC_SC -> EXTINT |= 1; //Limpia la bandera de interrupciones externas.
     NVIC_EnableIRQ(EINT0_IRQn); //Habilita las interrupciones externas.
     NVIC_SetPriority(EINT0_IRQn, 1);
