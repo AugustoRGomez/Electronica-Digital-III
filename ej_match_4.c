@@ -155,19 +155,19 @@ void confTimer0 (void) {
 	uint8_t reset_array[4] = {DISABLE, DISABLE, DISABLE, ENABLE};
 	uint32_t match_array[4]= {49, 99, 149, 199};
 
-	timer_config.PrescaleOption	    =	TIM_PRESCALE_USVAL;
-	timer_config.PrescaleValue		=	100;
+	timer_config.PrescaleOption	   = TIM_PRESCALE_USVAL;
+	timer_config.PrescaleValue	   = 100;
 
-	timer_match.IntOnMatch			=	ENABLE;
-	timer_match.StopOnMatch		    =	DISABLE;
-	timer_match.ExtMatchOutputType	=	TIM_EXTMATCH_NOTHING;
+	timer_match.IntOnMatch		   = ENABLE;
+	timer_match.StopOnMatch		   = DISABLE;
+	timer_match.ExtMatchOutputType = TIM_EXTMATCH_NOTHING;
 
 	TIM_Init(LPC_TIM0, TIM_TIMER_MODE, &timer_config);
 
 	for (int i= 0; i< 4; i++) {
-		timer_match.MatchChannel =	(uint8_t) i;
-		timer_match.ResetOnMatch =	reset_array[i];
-		timer_match.MatchValue	 =	match_array[i];
+		timer_match.MatchChannel = (uint8_t) i;
+		timer_match.ResetOnMatch = reset_array[i];
+		timer_match.MatchValue	 = match_array[i];
 		TIM_ConfigMatch(LPC_TIM0, &timer_match);
 	}
 
@@ -202,7 +202,7 @@ void TIMER0_IRQHandler (void) {
 	}
 }
 
-void EXTI_IRQHandler (void) {
+void EINT3_IRQHandler (void) {
 	eint_flag ^= 1;
 	EXTI_ClearEXTIFlag(EXTI_EINT3);
 }
