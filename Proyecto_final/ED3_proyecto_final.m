@@ -6,13 +6,11 @@
 
 % INITIALIZATION
 clear;clc;
-% s= serial('COM3', 'BaudRate', 115200, 'ByteOrder','littleEndian');
-s= serial('COM4', 'BaudRate', 9600, 'ByteOrder','littleEndian');
+s= serial('COM4', 'BaudRate', 9600, 'ByteOrder','littleEndian'); %cambiar COM y baudrate segun corrseponda
 s.InputBufferSize= 20; %bytes del buffer
 s.Terminator= 0; 
 fopen(s);
-
-% INTERFACE
+%% INTERFACE
 sep= '//---------------------------------------------------------------------------//\n';
 fprintf(sep);
 fprintf('\t\tPROYECTO FINAL ED3\n');
@@ -46,6 +44,7 @@ while exit_flag == 0
                 readyToLoad= fread(s,1,'uint8');
                 if (readyToLoad == 1)
                     fwrite(s,hex2dec(newKey),'uint32');
+                     fprintf('Clave guardada con exito\n');
                 else
                     fprintf('Ocurrio un error cargando la nueva clave\n');
                 end
