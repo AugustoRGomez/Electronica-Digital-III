@@ -1,10 +1,12 @@
 /*
 ===============================================================================
- Name        : ED3_proyecto_final_uart_LPC.c
+ Name        : ED3_proyecto_final_LPC.c
  Author      : $(author)
  Version     :
  Copyright   : $(copyright)
- Description :
+ Description : (TX) Graba el mensaje, tiene una clave configurable, envia los datos
+               a través de modulo nrf, interfaz con usuario (Script MATLAB)
+			   mediante UART.
 ===============================================================================
 */
 
@@ -29,12 +31,12 @@
 #define MASK_INT_ID (0xE)
 #define MASK_RDA_INT (2)
 #define LPC_UART_0 (LPC_UART_TypeDef*) LPC_UART0_BASE
-#define LED_RED_TOGGLE() LPC_GPIO0 -> FIOPIN = (LPC_GPIO0 -> FIOPIN) ^ (1 << 22)
-#define LED_BLUE_TOGGLE() LPC_GPIO3 -> FIOPIN = (LPC_GPIO3 -> FIOPIN) ^ (1 << 26)
-#define LED_GREEN_TOGGLE() LPC_GPIO3 -> FIOPIN = (LPC_GPIO3 -> FIOPIN) ^ (1 << 25)
-#define TIME 1000000U
+#define LED_RED_TOGGLE() LPC_GPIO0 -> FIOPIN ^= (1 << 22)
+#define LED_BLUE_TOGGLE() LPC_GPIO3 -> FIOPIN ^= (1 << 26)
+#define LED_GREEN_TOGGLE() LPC_GPIO3 -> FIOPIN ^= (1 << 25)
 #define IN_BUFF_LEN 12000u
 
+//xxx Variables y punteros
 uint32_t currentKey;
 uint8_t readyToLoad, flagAdcDone;
 uint8_t cmd[3];
@@ -51,6 +53,7 @@ void blinkGreenLed(void);
 void blinkBlueLed(void);
 void delay_ms(int);
 
+//xxx MAIN
 int main(void) {
 	/* Init */
 	initLEDPins();
@@ -63,12 +66,16 @@ int main(void) {
     currentKey = 0x12345678; //valor por defecto
     readyToLoad = 1;
 	while(1){
+		//Escuchar comandos
+		UART_Receive(LPC_UART_0, (uint8_t *)cmd, sizeof(cmd), BLOCKING);
+
 		if (cmd[0] == '.') {
 			/*
 			 * decide que comando ejecutar:
 			 * 'g': Get current Key
 			 * 's': Set a new Key
-			 * 'r': Record and send message (FALTA)
+			 * 'r': Record and send message
+			 * 't': Transmit message by SPI (falta)
 			 */
 			switch (cmd[1]) {
 			case 'g':
@@ -84,6 +91,7 @@ int main(void) {
 				break;
 			case 'r':
 				//Record a 2sec message
+				flagAdcDone = 0;
 				TIM_ResetCounter(LPC_TIM0);
 				TIM_Cmd(LPC_TIM0, ENABLE);
 				while(!flagAdcDone) {};
@@ -104,29 +112,21 @@ void initUART0(void)
 	 * P0.2 TX0
 	 * P0.3 RX0
 	 */
+	LPC_PINCON->PINSEL0 |= (1<<4)|(1<<6); //funcion TXD0/RXD0 para los pines P0.2/P0.3
+	//LPC_SC->PCONP |= 1<<3; //enciendo UART0 (por default encendido)
 
-	/* Init con drivers */
-	UART_CFG_Type uart0Config;
-	uart0Config.Baud_rate = 115200;
-	uart0Config.Databits = UART_DATABIT_8;
-	uart0Config.Parity = UART_PARITY_NONE;
-	uart0Config.Stopbits = UART_STOPBIT_1;
-	UART_Init(LPC_UART_0, &uart0Config);
-	UART_IntConfig(LPC_UART_0, UART_INTCFG_RBR, ENABLE);
-	NVIC_EnableIRQ(UART0_IRQn);
+	LPC_UART0->LCR = 3|DLAB_BIT ; //8 bits, sin paridad, 1 Stop bit y DLAB enable
+	LPC_UART0->DLL = 12;
+	LPC_UART0->DLM = 0;
+	LPC_UART0->FDR = (MULVAL<<4)|DIVADDVAL; //MULVAL=15(bits - 7:4), DIVADDVAL=2(bits - 3:0)
+	//bloquear divisor latches
+	LPC_UART0->LCR &= ~(DLAB_BIT); //desactivando DLAB lockeamos los divisores para el Baudrate
 
-//	LPC_PINCON->PINSEL0 |= (1<<4)|(1<<6); //funcion TXD0/RXD0 para los pines P0.2/P0.3
-//	//LPC_SC->PCONP |= 1<<3; //enciendo UART0 (por default encendido)
-//
-//	LPC_UART_0->LCR = 3|DLAB_BIT ; //8 bits, sin paridad, 1 Stop bit y DLAB enable
-//	LPC_UART_0->DLL = 12;
-//	LPC_UART_0->DLM = 0;
-//
-//	LPC_UART_0->IER |= Rx_RDA_INT; //int cada vez que se reciban cierto numero de char (1 en este caso)
-//	LPC_UART_0->FCR |= Ux_FIFO_EN|Rx_FIFO_RST|Tx_FIFO_RST;
-//	LPC_UART_0->FDR = (MULVAL<<4)|DIVADDVAL; //MULVAL=15(bits - 7:4), DIVADDVAL=2(bits - 3:0)
-//	LPC_UART_0->LCR &= ~(DLAB_BIT); //desactivando DLAB lockeamos los divisores para el Baudrate
-//	NVIC_EnableIRQ(UART0_IRQn);
+	//LPC_UART0->IER |= Rx_RDA_INT; //int cada vez que se reciban cierto numero de char (1 en este caso)
+	LPC_UART0->FCR |= Ux_FIFO_EN|Rx_FIFO_RST|Tx_FIFO_RST;
+
+	//NVIC_ClearPendingIRQ(UART0_IRQn);
+	//NVIC_EnableIRQ(UART0_IRQn);
 }
 
 void initLEDPins(void) {
@@ -142,11 +142,18 @@ void initLEDPins(void) {
 	ledPin.Pinmode = PINSEL_PINMODE_PULLUP;
 	ledPin.Funcnum = 0;
 
+
 	for (int i = 0;i < 3; i++) {
 		ledPin.Pinnum = ledNum[i];
 		ledPin.Portnum = ledPort[i];
 		PINSEL_ConfigPin(&ledPin);
+		GPIO_SetDir(ledPort[i], 1<<ledNum[i], 1);
 	}
+
+	//dejar pines en alto (LEDS OFF)
+	GPIO_SetValue(0, 1<<22);
+	GPIO_SetValue(3, 1<<25);
+	GPIO_SetValue(3, 1<<26);
 }
 
 void initADC(void) {
@@ -169,6 +176,8 @@ void initADC(void) {
 	ADC_StartCmd(LPC_ADC, ADC_START_ON_MAT01); //configura START de ADCR
 	ADC_EdgeStartConfig(LPC_ADC, ADC_START_ON_FALLING); //configura EDGE de ADCR
 	ADC_IntConfig(LPC_ADC, ADC_ADGINTEN, SET); //configura individualmente las int por canales o la global
+
+	NVIC_ClearPendingIRQ(ADC_IRQn);
 	NVIC_EnableIRQ(ADC_IRQn);
 }
 
@@ -191,7 +200,6 @@ void initTMR0(void) {
 	//LPC_TIM0 -> TCR &= ~(2); //quito el reset
 }
 
-
 void initTMR2(void) {
 	/*
 	 * Temporizador de resolucion de 1ms
@@ -205,14 +213,15 @@ void initTMR2(void) {
 	TIM_Init(LPC_TIM2, TIM_TIMER_MODE, &timer2_conf); //TIM_Init no le da enable
 }
 
-void UART0_IRQHandler(void) {
-	uint32_t uartIntSt = UART_GetIntId(LPC_UART_0); //valor del registro IIR
-
-	if (((uartIntSt & MASK_INT_ID) >> 1) == MASK_RDA_INT) {
-		UART_Receive(LPC_UART_0, &cmd[0], sizeof(cmd), BLOCKING);
-	}
-	//en teoria se limpia el flag cuando se efectua la lectura de los datos
-}
+//no funciono
+//void UART0_IRQHandler(void) {
+//	uint32_t uartIntSt = UART_GetIntId(LPC_UART_0); //valor del registro IIR
+//
+//	if (((uartIntSt & MASK_INT_ID) >> 1) == MASK_RDA_INT) {
+//		UART_Receive(LPC_UART_0, &cmd[1], sizeof(cmd), BLOCKING);
+//	}
+//	//en teoria se limpia el flag cuando se efectua la lectura de los datos
+//}
 
 void ADC_IRQHandler(void) {
 	volatile uint16_t ADC_value;
@@ -225,7 +234,6 @@ void ADC_IRQHandler(void) {
 	}
 	else {
 		pInBuff++;
-		flagAdcDone = 0;
 	}
 }
 
@@ -246,6 +254,7 @@ void blinkBlueLed(void) {
 	delay_ms(100);
 	LED_BLUE_TOGGLE();
 }
+
 void delay_ms(int time) {
 	TIM_ResetCounter(LPC_TIM2);
 	TIM_Cmd(LPC_TIM2, ENABLE);

@@ -10,7 +10,10 @@ s= serial('COM4', 'BaudRate', 9600, 'ByteOrder','littleEndian'); %cambiar COM y 
 s.InputBufferSize= 20; %bytes del buffer
 s.Terminator= 0; 
 fopen(s);
+
 %% INTERFACE
+flushinput(s);
+flushoutput(s);
 sep= '//---------------------------------------------------------------------------//\n';
 fprintf(sep);
 fprintf('\t\tPROYECTO FINAL ED3\n');
@@ -44,19 +47,18 @@ while exit_flag == 0
                 readyToLoad= fread(s,1,'uint8');
                 if (readyToLoad == 1)
                     fwrite(s,hex2dec(newKey),'uint32');
-                     fprintf('Clave guardada con exito\n');
+                     fprintf('Clave cargada con exito\n');
                 else
                     fprintf('Ocurrio un error cargando la nueva clave\n');
                 end
             end
+        case 'transmit'
+            fprintf(s,'.t');
         otherwise
             fprintf('\t*COMANDO INVALIDO*\n');
     end
 end
 
-%%
-flushinput(s);
-flushoutput(s);
 %% Close serial port
 fclose(s);
 delete(s);
