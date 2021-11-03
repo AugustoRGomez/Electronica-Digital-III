@@ -6,7 +6,7 @@
 
 % INITIALIZATION
 clear;clc;
-s= serial('COM4', 'BaudRate', 9600, 'ByteOrder','littleEndian'); %cambiar COM y baudrate segun corrseponda
+s= serial('COM4', 'BaudRate', 115200, 'ByteOrder','littleEndian'); %cambiar COM y baudrate segun corrseponda
 s.InputBufferSize= 20; %bytes del buffer
 s.Terminator= 0; 
 fopen(s);
@@ -26,34 +26,37 @@ while exit_flag == 0
     switch cmd
         case 'cmd'
             fprintf('\Comandos disponibles:\n');
-            fprintf('\t* "exit" -> cerrar el programa\n');
-            fprintf('\t* "record" -> grabar mensaje a transmitir\n');
             fprintf('\t* "getkey" -> obtener clave de validacion actual del receptor\n');
             fprintf('\t* "setkey" -> modificar clave de validacion del receptor\n');
+            fprintf('\t* "onradio" -> empezar la transmision\n');
+            fprintf('\t* "offradio" -> apagar la transmision\n');
+            fprintf('\t* "exit" -> cerrar el programa\n');
         case 'exit'
             exit_flag=1;
         case 'record'
             fprintf(s,'.r');
         case 'getkey'
             fprintf(s,'.g');
-            currentKey= fread(s,1,'uint32');
-            fprintf("La clave actual es: "+ num2str(currentKey, '%.8x') + "\n");
+            currentKey= fread(s,1,'uint8');
+            fprintf("La clave actual es: "+ num2str(currentKey, '%.2x') + "\n");
         case 'setkey'
-            newKey= input('Ingrese la nueva clave de validación (8 digitos en HEX) >> ','s');
-            if hex2dec(newKey) > (2^32-1)
+            newKey= input('Ingrese la nueva clave de validación (2 digitos en HEX) >> ','s');
+            if hex2dec(newKey) > (2^8-1)
                 fprintf('Error, la clave no es valida\n');
             else
                 fprintf(s, '.s');
                 readyToLoad= fread(s,1,'uint8');
                 if (readyToLoad == 1)
-                    fwrite(s,hex2dec(newKey),'uint32');
+                    fwrite(s,hex2dec(newKey),'uint8');
                      fprintf('Clave cargada con exito\n');
                 else
                     fprintf('Ocurrio un error cargando la nueva clave\n');
                 end
             end
-        case 'transmit'
-            fprintf(s,'.t');
+        case 'onradio'
+            fprintf(s,'.o');
+        case 'offradio'
+            fprintf(s,'.f');    
         otherwise
             fprintf('\t*COMANDO INVALIDO*\n');
     end

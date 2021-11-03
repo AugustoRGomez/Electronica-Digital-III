@@ -105,8 +105,7 @@ int main(void) {
     return 0 ;
 }
 
-void initUART0(void)
-{
+void initUART0(void) {
 	/*
 	 * BaudRate= ~115200(114882) (si PCLK=25MHz, lo es por defecto)
 	 * P0.2 TX0
@@ -261,3 +260,5 @@ void delay_ms(int time) {
 	while (LPC_TIM2 -> TC < time); //en [ms]
 	TIM_Cmd(LPC_TIM2, DISABLE);
 }
+
+//Comment random
